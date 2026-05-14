@@ -302,11 +302,30 @@ func parseExcludedExts(raw string) map[string]struct{} {
 }
 
 func printExtensionTable(out io.Writer, stats []extensionStat) {
-	fmt.Fprintln(out, "Extension  Files  Lines")
-	fmt.Fprintln(out, "---------  -----  -----")
+	extWidth := len("Extension")
+	filesWidth := len("Files")
+	linesWidth := len("Lines")
+	var totalFiles int
+	var totalLines int64
+
 	for _, stat := range stats {
-		fmt.Fprintf(out, "%-9s  %5d  %5d\n", stat.Extension, stat.Files, stat.Lines)
+		extWidth = max(extWidth, len(stat.Extension))
+		filesWidth = max(filesWidth, len(formatInt(stat.Files)))
+		linesWidth = max(linesWidth, len(formatInt64(stat.Lines)))
+		totalFiles += stat.Files
+		totalLines += stat.Lines
 	}
+
+	filesWidth = max(filesWidth, len(formatInt(totalFiles)))
+	linesWidth = max(linesWidth, len(formatInt64(totalLines)))
+
+	fmt.Fprintf(out, "%-*s  %*s  %*s\n", extWidth, "Extension", filesWidth, "Files", linesWidth, "Lines")
+	fmt.Fprintf(out, "%s  %s  %s\n", strings.Repeat("-", extWidth), strings.Repeat("-", filesWidth), strings.Repeat("-", linesWidth))
+	for _, stat := range stats {
+		fmt.Fprintf(out, "%-*s  %*d  %*d\n", extWidth, stat.Extension, filesWidth, stat.Files, linesWidth, stat.Lines)
+	}
+	fmt.Fprintf(out, "%s  %s  %s\n", strings.Repeat("-", extWidth), strings.Repeat("-", filesWidth), strings.Repeat("-", linesWidth))
+	fmt.Fprintf(out, "%-*s  %*d  %*d\n", extWidth, "Total", filesWidth, totalFiles, linesWidth, totalLines)
 }
 
 func printTopFiles(out io.Writer, files []fileStat, top int) {
@@ -438,4 +457,12 @@ func matchSegments(patterns []string, values []string) bool {
 
 func globRegex(pattern string) string {
 	return strings.ReplaceAll(pattern, "**", "*")
+}
+
+func formatInt(value int) string {
+	return fmt.Sprintf("%d", value)
+}
+
+func formatInt64(value int64) string {
+	return fmt.Sprintf("%d", value)
 }
