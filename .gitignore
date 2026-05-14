@@ -1,0 +1,15 @@
+# Binaries and build output
+bin/
+dist/
+*.exe
+*.test
+
+# Coverage and profiling
+coverage.out
+*.prof
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
