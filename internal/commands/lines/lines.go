@@ -118,6 +118,7 @@ func countLines(cfg config) (result, error) {
 	jobs := make(chan string, workers*4)
 	results := make(chan fileStat, workers*4)
 	errs := make(chan error, 1)
+	walkErrs := make(chan error, 1)
 
 	var wg sync.WaitGroup
 	wg.Add(workers)
@@ -143,43 +144,45 @@ func countLines(cfg config) (result, error) {
 		close(results)
 	}()
 
-	walkErr := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if path == root {
-			return nil
-		}
-
-		rel, err := filepath.Rel(root, path)
-		if err != nil {
-			return err
-		}
-
-		if entry.IsDir() {
-			if entry.Name() == ".git" {
-				return filepath.SkipDir
+	go func() {
+		walkErrs <- filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
 			}
-			if cfg.useGitignore && matcher.match(rel, true) {
-				return filepath.SkipDir
+			if path == root {
+				return nil
 			}
-			return nil
-		}
 
-		if !entry.Type().IsRegular() {
-			return nil
-		}
-		if cfg.useGitignore && matcher.match(rel, false) {
-			return nil
-		}
-		if _, ok := cfg.excludedExts[extension(path)]; ok {
-			return nil
-		}
+			rel, err := filepath.Rel(root, path)
+			if err != nil {
+				return err
+			}
 
-		jobs <- path
-		return nil
-	})
-	close(jobs)
+			if entry.IsDir() {
+				if entry.Name() == ".git" {
+					return filepath.SkipDir
+				}
+				if cfg.useGitignore && matcher.match(rel, true) {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+
+			if !entry.Type().IsRegular() {
+				return nil
+			}
+			if cfg.useGitignore && matcher.match(rel, false) {
+				return nil
+			}
+			if _, ok := cfg.excludedExts[extension(path)]; ok {
+				return nil
+			}
+
+			jobs <- path
+			return nil
+		})
+		close(jobs)
+	}()
 
 	byExt := make(map[string]*extensionStat)
 	files := make([]fileStat, 0)
@@ -195,7 +198,7 @@ func countLines(cfg config) (result, error) {
 		files = append(files, stat)
 	}
 
-	if walkErr != nil {
+	if walkErr := <-walkErrs; walkErr != nil {
 		return result{}, walkErr
 	}
 	select {
