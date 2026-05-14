@@ -2,9 +2,16 @@
 
 A collection of small, fast, cross-platform CLI tools written in Go.
 
+After installation, everything runs through one command:
+
+```sh
+gli <command> <flags>
+```
+
 The project is intentionally simple:
 
-- each command lives in `cmd/<tool-name>`
+- `cmd/gli` builds the single executable
+- each subcommand lives in `internal/commands/<command-name>`
 - shared code lives in `internal/`
 - tools are built as single native binaries
 - the standard library is preferred unless a dependency clearly earns its keep
@@ -18,7 +25,29 @@ The project is intentionally simple:
 
 | Tool | Description |
 | --- | --- |
-| `hello` | Minimal example command used as the project skeleton. |
+| `gli hello` | Minimal example command used as the project skeleton. |
+
+## Install
+
+### Windows PowerShell
+
+Run:
+
+```powershell
+.\scripts\install-path.ps1
+```
+
+This builds `gli.exe` into `%USERPROFILE%\.gli\bin` and adds that folder to your user `PATH` if needed. Open a new terminal after running it.
+
+### macOS And Linux
+
+Run:
+
+```sh
+sh ./scripts/install-path.sh
+```
+
+This builds `gli` into `$HOME/.local/bin`. If that directory is not already on `PATH`, the script prints the line to add to your shell profile.
 
 ## Build
 
@@ -31,13 +60,13 @@ make build
 Without `make`:
 
 ```sh
-go build -trimpath -ldflags="-s -w" -o bin/hello ./cmd/hello
+go build -trimpath -ldflags="-s -w" -o bin/gli ./cmd/gli
 ```
 
 On Windows PowerShell, build the sample tool with:
 
 ```powershell
-go build -trimpath -ldflags="-s -w" -o bin/hello.exe ./cmd/hello
+go build -trimpath -ldflags="-s -w" -o bin/gli.exe ./cmd/gli
 ```
 
 ## Test
@@ -54,10 +83,10 @@ go test ./...
 
 ## Add A Tool
 
-Create a new folder under `cmd/`:
+Create a new folder under `internal/commands/`:
 
 ```text
-cmd/my-tool/main.go
+internal/commands/mytool/mytool.go
 ```
 
 Keep command startup cheap:
@@ -67,16 +96,16 @@ Keep command startup cheap:
 - stream input and output where possible
 - keep dependencies small and intentional
 
-Then add the tool name to `TOOLS` in the `Makefile`.
+Then register the command in `internal/gli/gli.go`.
 
 ## Cross-Compile
 
 Go can build native binaries for other platforms with `GOOS` and `GOARCH`:
 
 ```sh
-GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/hello-linux-amd64 ./cmd/hello
-GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o dist/hello-darwin-arm64 ./cmd/hello
-GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/hello-windows-amd64.exe ./cmd/hello
+GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/gli-linux-amd64 ./cmd/gli
+GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o dist/gli-darwin-arm64 ./cmd/gli
+GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/gli-windows-amd64.exe ./cmd/gli
 ```
 
 ## License
