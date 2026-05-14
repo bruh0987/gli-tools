@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/bruh0987/gli-tools/internal/commands/hello"
+	"github.com/bruh0987/gli-tools/internal/commands/lines"
 )
 
 type Command struct {
@@ -21,6 +22,11 @@ func Run(args []string, out io.Writer, errOut io.Writer, version string) int {
 			Name:        "hello",
 			Description: "Print a greeting.",
 			Run:         hello.Run,
+		},
+		"lines": {
+			Name:        "lines",
+			Description: "Count lines by file extension.",
+			Run:         lines.Run,
 		},
 	}
 

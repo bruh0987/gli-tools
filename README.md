@@ -26,6 +26,39 @@ The project is intentionally simple:
 | Tool | Description |
 | --- | --- |
 | `gli hello` | Minimal example command used as the project skeleton. |
+| `gli lines` | Count lines recursively and group them by file extension. |
+
+### `gli lines`
+
+Count all lines under the current directory:
+
+```sh
+gli lines
+```
+
+Count another directory:
+
+```sh
+gli lines ./path/to/project
+```
+
+Show the largest files by line count:
+
+```sh
+gli lines --top 10 ./path/to/project
+```
+
+Honor the root `.gitignore` file:
+
+```sh
+gli lines --gitignore ./path/to/project
+```
+
+Exclude extensions:
+
+```sh
+gli lines --exclude md,json,txt ./path/to/project
+```
 
 ## Install
 
