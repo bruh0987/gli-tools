@@ -9,6 +9,7 @@ import (
 	"github.com/bruh0987/gli-tools/internal/build"
 	"github.com/bruh0987/gli-tools/internal/commands/hello"
 	"github.com/bruh0987/gli-tools/internal/commands/lines"
+	"github.com/bruh0987/gli-tools/internal/commands/reload"
 	"github.com/bruh0987/gli-tools/internal/commands/update"
 )
 
@@ -29,6 +30,11 @@ func Run(args []string, out io.Writer, errOut io.Writer) int {
 			Name:        "lines",
 			Description: "Count lines by file extension.",
 			Run:         lines.Run,
+		},
+		"reload": {
+			Name:        "reload",
+			Description: "Refresh shell PATH helpers.",
+			Run:         reload.Run,
 		},
 		"update": {
 			Name:        "update",

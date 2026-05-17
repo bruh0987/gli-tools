@@ -27,6 +27,7 @@ The project is intentionally simple:
 | --- | --- |
 | `gli hello` | Minimal example command used as the project skeleton. |
 | `gli lines` | Count lines recursively and group them by file extension. |
+| `gli reload` | Print or run helpers for refreshing shell `PATH`. |
 | `gli update` | Replace the current `gli` binary from GitHub. |
 
 ## Usage
@@ -53,6 +54,24 @@ gli update --force main
 ```
 
 The update target can be a branch, tag, or commit hash.
+
+### `gli reload`
+
+Refresh helpers for when `PATH` changed after installing tools:
+
+```sh
+gli reload
+gli reload --print
+gli reload --check
+gli reload --shell powershell --print
+gli reload --spawn
+```
+
+A process cannot directly mutate the already-running parent shell, so the default output gives you the command to run in your current shell. On PowerShell, this works:
+
+```powershell
+Invoke-Expression (gli reload --print)
+```
 
 ### `gli lines`
 
