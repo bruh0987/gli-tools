@@ -2,6 +2,7 @@ package reload
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -22,6 +23,7 @@ func Run(args []string, out io.Writer, errOut io.Writer) int {
 	printOnly := flags.Bool("print", false, "print only the reload command")
 	jsonOutput := flags.Bool("json", false, "print diagnostics as JSON")
 	spawn := flags.Bool("spawn", false, "open a fresh shell with the latest PATH")
+	installHook := flags.Bool("install-hook", false, "install a PowerShell profile hook so gli reload works in-place")
 	shell := flags.String("shell", detectShell(), "shell to target: powershell, cmd, bash, zsh, fish")
 
 	if err := flags.Parse(args); err != nil {
@@ -42,6 +44,13 @@ func Run(args []string, out io.Writer, errOut io.Writer) int {
 	}
 	if *check {
 		printCheck(out, info)
+		return 0
+	}
+	if *installHook {
+		if err := installPowerShellHook(out); err != nil {
+			fmt.Fprintln(errOut, err)
+			return 1
+		}
 		return 0
 	}
 	if *spawn {
@@ -67,6 +76,11 @@ func Run(args []string, out io.Writer, errOut io.Writer) int {
 	fmt.Fprintln(out, "  gli reload --check")
 	fmt.Fprintln(out, "  gli reload --print")
 	fmt.Fprintln(out, "  gli reload --spawn")
+	if info.Shell == "powershell" {
+		fmt.Fprintln(out)
+		fmt.Fprintln(out, "To make `gli reload` work in-place, run:")
+		fmt.Fprintln(out, "  gli reload --install-hook")
+	}
 	return 0
 }
 
@@ -110,14 +124,105 @@ func printHelp(out io.Writer) {
 	fmt.Fprintln(out, "  Invoke-Expression (gli reload --print)")
 	fmt.Fprintln(out, "  gli reload --shell bash --print")
 	fmt.Fprintln(out, "  gli reload --check")
+	fmt.Fprintln(out, "  gli reload --install-hook")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Flags:")
 	fmt.Fprintln(out, "  -h, --help        show this help")
 	fmt.Fprintln(out, "      --check       show PATH diagnostics")
 	fmt.Fprintln(out, "      --json        print diagnostics as JSON")
+	fmt.Fprintln(out, "      --install-hook install a PowerShell profile hook for in-place reloads")
 	fmt.Fprintln(out, "      --print       print only the reload command")
 	fmt.Fprintln(out, "      --shell name  target shell: powershell, cmd, bash, zsh, fish")
 	fmt.Fprintln(out, "      --spawn       open a fresh shell with the latest PATH")
+}
+
+func installPowerShellHook(out io.Writer) error {
+	if runtime.GOOS != "windows" {
+		return errors.New("--install-hook currently supports PowerShell on Windows")
+	}
+	gliPath, err := exec.LookPath("gli")
+	if err != nil {
+		return err
+	}
+	profile, err := powershellProfilePath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(profile), 0o755); err != nil {
+		return err
+	}
+
+	existing, _ := os.ReadFile(profile)
+	start := "# BEGIN gli reload hook"
+	end := "# END gli reload hook"
+	hook := strings.Join([]string{
+		start,
+		"function gli {",
+		"    $gliExe = '" + escapePowerShellSingleQuoted(gliPath) + "'",
+		"    if ($args.Count -gt 0 -and $args[0] -eq 'reload') {",
+		"        $rest = @($args | Select-Object -Skip 1)",
+		"        if ($rest.Count -eq 0) {",
+		"            Invoke-Expression (& $gliExe reload --print)",
+		"            Write-Host 'PATH reloaded for this PowerShell session.'",
+		"            return",
+		"        }",
+		"    }",
+		"    & $gliExe @args",
+		"}",
+		end,
+		"",
+	}, "\r\n")
+
+	content := removeBlock(string(existing), start, end)
+	if strings.TrimSpace(content) != "" {
+		content = strings.TrimRight(content, "\r\n") + "\r\n\r\n"
+	}
+	content += hook
+
+	if err := os.WriteFile(profile, []byte(content), 0o644); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "installed PowerShell hook in %s\n", profile)
+	fmt.Fprintln(out, "Restart PowerShell or run:")
+	fmt.Fprintf(out, ". %s\n", quotePowerShellPath(profile))
+	return nil
+}
+
+func powershellProfilePath() (string, error) {
+	powerShell := "powershell"
+	if path, err := exec.LookPath("pwsh"); err == nil && path != "" {
+		powerShell = path
+	}
+	cmd := exec.Command(powerShell, "-NoProfile", "-Command", "$PROFILE.CurrentUserAllHosts")
+	data, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	path := strings.TrimSpace(string(data))
+	if path == "" {
+		return "", errors.New("could not determine PowerShell profile path")
+	}
+	return path, nil
+}
+
+func removeBlock(content string, start string, end string) string {
+	startIndex := strings.Index(content, start)
+	if startIndex < 0 {
+		return content
+	}
+	endIndex := strings.Index(content[startIndex:], end)
+	if endIndex < 0 {
+		return content
+	}
+	endIndex += startIndex + len(end)
+	for endIndex < len(content) && (content[endIndex] == '\r' || content[endIndex] == '\n') {
+		endIndex++
+	}
+	return content[:startIndex] + content[endIndex:]
+}
+
+func quotePowerShellPath(path string) string {
+	return "'" + escapePowerShellSingleQuoted(path) + "'"
 }
 
 func printCheck(out io.Writer, info info) {
