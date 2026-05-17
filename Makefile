@@ -1,5 +1,8 @@
 BINARY_DIR := bin
 TOOL := gli
+VERSION ?= dev
+COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+LDFLAGS := -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT)
 
 .PHONY: all build test fmt clean
 
@@ -7,7 +10,7 @@ all: test build
 
 build:
 	@mkdir -p $(BINARY_DIR)
-	go build -trimpath -ldflags="-s -w" -o $(BINARY_DIR)/$(TOOL) ./cmd/$(TOOL)
+	go build -trimpath -ldflags="$(LDFLAGS)" -o $(BINARY_DIR)/$(TOOL) ./cmd/$(TOOL)
 
 test:
 	go test ./...

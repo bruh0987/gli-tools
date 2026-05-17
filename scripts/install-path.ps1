@@ -8,7 +8,11 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
 $output = Join-Path $InstallDir "gli.exe"
-go build -trimpath -ldflags="-s -w" -o $output (Join-Path $repoRoot "cmd\gli")
+$commit = git -C $repoRoot rev-parse --short HEAD 2>$null
+if (-not $commit) {
+    $commit = "unknown"
+}
+go build -trimpath -ldflags="-s -w -X main.version=dev -X main.commit=$commit" -o $output (Join-Path $repoRoot "cmd\gli")
 
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
 $paths = @($userPath -split ';' | Where-Object { $_ -ne "" })

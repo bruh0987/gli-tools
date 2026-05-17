@@ -27,6 +27,27 @@ The project is intentionally simple:
 | --- | --- |
 | `gli hello` | Minimal example command used as the project skeleton. |
 | `gli lines` | Count lines recursively and group them by file extension. |
+| `gli update` | Replace the current `gli` binary from GitHub. |
+
+## Usage
+
+```sh
+gli
+gli -h
+gli -v
+gli <command> <flags>
+```
+
+`gli update` pulls and builds the latest `main` branch from GitHub. To pin or downgrade, pass any Git ref:
+
+```sh
+gli update
+gli update 3f96d40
+gli update v0.1.0
+gli update --dry-run main
+```
+
+The update target can be a branch, tag, or commit hash.
 
 ### `gli lines`
 
@@ -93,13 +114,13 @@ make build
 Without `make`:
 
 ```sh
-go build -trimpath -ldflags="-s -w" -o bin/gli ./cmd/gli
+go build -trimpath -ldflags="-s -w -X main.version=dev -X main.commit=$(git rev-parse --short HEAD)" -o bin/gli ./cmd/gli
 ```
 
 On Windows PowerShell, build the sample tool with:
 
 ```powershell
-go build -trimpath -ldflags="-s -w" -o bin/gli.exe ./cmd/gli
+go build -trimpath -ldflags="-s -w -X main.version=dev -X main.commit=$(git rev-parse --short HEAD)" -o bin/gli.exe ./cmd/gli
 ```
 
 ## Test
