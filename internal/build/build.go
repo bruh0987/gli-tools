@@ -7,19 +7,13 @@ const (
 	RepoGit = "https://github.com/bruh0987/gli-tools.git"
 )
 
-var Version = "dev"
+var Version = "0.1.0"
 var Commit = "unknown"
 
 func DisplayVersion() string {
 	version := Version
 	if version == "" {
-		version = "dev"
-	}
-	if version == "dev" {
-		if Commit == "" || Commit == "unknown" {
-			return version
-		}
-		return version + " (" + Commit + ")"
+		version = "0.1.0"
 	}
 	if !strings.HasPrefix(version, "v") {
 		version = "v" + version

@@ -35,16 +35,21 @@ The project is intentionally simple:
 gli
 gli -h
 gli -v
+gli --help
+gli --version
 gli <command> <flags>
 ```
 
-`gli update` pulls and builds the latest `main` branch from GitHub. To pin or downgrade, pass any Git ref:
+`gli update` pulls and builds the latest `main` branch from GitHub. If the installed binary already matches the target commit, it exits without replacing itself. Use `--force` to rebuild and replace anyway.
+
+To pin or downgrade, pass any Git ref:
 
 ```sh
 gli update
 gli update 3f96d40
 gli update v0.1.0
 gli update --dry-run main
+gli update --force main
 ```
 
 The update target can be a branch, tag, or commit hash.

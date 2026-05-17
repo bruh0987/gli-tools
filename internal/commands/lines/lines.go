@@ -39,12 +39,18 @@ func Run(args []string, out io.Writer, errOut io.Writer) int {
 	flags := flag.NewFlagSet("lines", flag.ContinueOnError)
 	flags.SetOutput(errOut)
 
+	showHelp := flags.Bool("help", false, "show help")
+	showHelpShort := flags.Bool("h", false, "show help")
 	top := flags.Int("top", 0, "display the top N files by line count")
 	useGitignore := flags.Bool("gitignore", false, "ignore files matched by .gitignore")
 	exclude := flags.String("exclude", "", "comma-separated extensions to exclude, like go,md,json")
 
 	if err := flags.Parse(args); err != nil {
 		return 2
+	}
+	if *showHelp || *showHelpShort {
+		printHelp(out)
+		return 0
 	}
 
 	root := "."
@@ -81,6 +87,24 @@ func Run(args []string, out io.Writer, errOut io.Writer) int {
 	}
 
 	return 0
+}
+
+func printHelp(out io.Writer) {
+	fmt.Fprintln(out, "Count lines recursively and group them by file extension.")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Usage:")
+	fmt.Fprintln(out, "  gli lines [directory] [flags]")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Examples:")
+	fmt.Fprintln(out, "  gli lines")
+	fmt.Fprintln(out, "  gli lines --top 10 .")
+	fmt.Fprintln(out, "  gli lines --gitignore --exclude md,json ./project")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Flags:")
+	fmt.Fprintln(out, "  -h, --help          show this help")
+	fmt.Fprintln(out, "      --top number    show the top N files by line count")
+	fmt.Fprintln(out, "      --gitignore     ignore files matched by the root .gitignore")
+	fmt.Fprintln(out, "      --exclude exts  comma-separated extensions to exclude, like go,md,json")
 }
 
 type result struct {

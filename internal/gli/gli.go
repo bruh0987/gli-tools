@@ -105,6 +105,6 @@ func printHelp(out io.Writer, commands map[string]Command) {
 	}
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Global flags:")
-	fmt.Fprintln(out, "  -h, -help    print help and exit")
-	fmt.Fprintln(out, "  -v, -version print version and exit")
+	fmt.Fprintln(out, "  -h, --help      print help and exit")
+	fmt.Fprintln(out, "  -v, --version   print version and exit")
 }

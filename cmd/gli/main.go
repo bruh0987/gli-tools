@@ -7,7 +7,7 @@ import (
 	"github.com/bruh0987/gli-tools/internal/gli"
 )
 
-var version = "dev"
+var version = "0.1.0"
 var commit = "unknown"
 
 func main() {

@@ -6,7 +6,7 @@ repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 commit="$(git -C "$repo_root" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 
 mkdir -p "$install_dir"
-go build -trimpath -ldflags="-s -w -X main.version=dev -X main.commit=$commit" -o "$install_dir/gli" "$repo_root/cmd/gli"
+go build -trimpath -ldflags="-s -w -X main.version=0.1.0 -X main.commit=$commit" -o "$install_dir/gli" "$repo_root/cmd/gli"
 
 case ":$PATH:" in
   *":$install_dir:"*)

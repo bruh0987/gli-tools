@@ -12,7 +12,7 @@ $commit = git -C $repoRoot rev-parse --short HEAD 2>$null
 if (-not $commit) {
     $commit = "unknown"
 }
-go build -trimpath -ldflags="-s -w -X main.version=dev -X main.commit=$commit" -o $output (Join-Path $repoRoot "cmd\gli")
+go build -trimpath -ldflags="-s -w -X main.version=0.1.0 -X main.commit=$commit" -o $output (Join-Path $repoRoot "cmd\gli")
 
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
 $paths = @($userPath -split ';' | Where-Object { $_ -ne "" })
