@@ -1,3 +1,8 @@
 module github.com/bruh0987/gli-tools
 
-go 1.25
+go 1.25.0
+
+require (
+	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/term v0.43.0 // indirect
+)

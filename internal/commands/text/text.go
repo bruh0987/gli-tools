@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 func Run(args []string, out io.Writer, errOut io.Writer) int {
@@ -173,6 +174,13 @@ func printPreview(out io.Writer, input string, width int) error {
 }
 
 func interactive(out io.Writer, errOut io.Writer, width int) int {
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		return interactiveRaw(out, errOut, width)
+	}
+	return interactiveLine(out, errOut, width)
+}
+
+func interactiveLine(out io.Writer, errOut io.Writer, width int) int {
 	reader := bufio.NewReader(os.Stdin)
 	styles := StyleNames()
 	styleIndex := 0
@@ -249,6 +257,235 @@ func interactive(out io.Writer, errOut io.Writer, width int) int {
 	}
 }
 
+func interactiveRaw(out io.Writer, errOut io.Writer, width int) int {
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		fmt.Fprintln(errOut, err)
+		return 1
+	}
+	defer term.Restore(int(os.Stdin.Fd()), oldState)
+
+	styles := StyleNames()
+	styleIndex := 0
+	input := editPromptRaw(out, "Text", "")
+	if strings.TrimSpace(input) == "" {
+		fmt.Fprintln(errOut, "\r\ntext cannot be empty")
+		return 2
+	}
+
+	for {
+		renderInteractive(out, input, styles[styleIndex], styleIndex, len(styles), width, "", nil)
+		key := readKey()
+		switch key {
+		case "n", "right", "down", " ":
+			styleIndex = (styleIndex + 1) % len(styles)
+		case "p", "left", "up":
+			styleIndex--
+			if styleIndex < 0 {
+				styleIndex = len(styles) - 1
+			}
+		case "/":
+			styleIndex = searchRaw(out, input, styles, styleIndex, width)
+		case "t":
+			next := editPromptRaw(out, "Text", input)
+			if strings.TrimSpace(next) != "" {
+				input = next
+			}
+		case "c":
+			rendered, _ := Render(input, styles[styleIndex], width)
+			if err := Copy(rendered); err != nil {
+				showMessageRaw(out, "copy failed: "+err.Error())
+			} else {
+				showMessageRaw(out, "copied as text")
+			}
+		case "e":
+			format := exportPickerRaw(out, input, styles[styleIndex], width)
+			if format != "" {
+				rendered, _ := Render(input, styles[styleIndex], width)
+				exported, err := Export(rendered, format)
+				if err != nil {
+					showMessageRaw(out, err.Error())
+				} else if err := Copy(exported); err != nil {
+					showMessageRaw(out, "copy failed: "+err.Error())
+				} else {
+					showMessageRaw(out, "copied as "+format)
+				}
+			}
+		case "q", "esc", "ctrl-c":
+			fmt.Fprint(out, "\r\n")
+			return 0
+		}
+	}
+}
+
+func renderInteractive(out io.Writer, input string, styleName string, index int, total int, width int, mode string, options []string) {
+	clearScreen(out)
+	rendered, err := Render(input, styleName, width)
+	if err != nil {
+		rendered = err.Error() + "\n"
+	}
+	fmt.Fprintf(out, "text: %s\r\nstyle: %s (%d/%d)\r\n\r\n%s\r\n", input, styleName, index+1, total, crlf(rendered))
+	fmt.Fprintln(out, "[n/p] style  [/] search  [t] text  [e] export+copy  [c] copy  [q] quit")
+	if mode != "" {
+		fmt.Fprintf(out, "\r\n%s\r\n", mode)
+	}
+	for _, option := range options {
+		fmt.Fprintf(out, "  %s\r\n", option)
+	}
+}
+
+func searchRaw(out io.Writer, input string, styles []string, current int, width int) int {
+	query := ""
+	selected := current
+	for {
+		matches := matchingStyles(styles, query)
+		if len(matches) > 0 {
+			selected = matches[0]
+		}
+		options := make([]string, 0, min(8, len(matches)))
+		for _, index := range matches[:min(8, len(matches))] {
+			prefix := " "
+			if index == selected {
+				prefix = ">"
+			}
+			options = append(options, prefix+" "+styles[index])
+		}
+		renderInteractive(out, input, styles[selected], selected, len(styles), width, "search: "+query, options)
+		key := readKey()
+		switch key {
+		case "enter":
+			return selected
+		case "esc":
+			return current
+		case "backspace":
+			if len(query) > 0 {
+				query = query[:len(query)-1]
+			}
+		default:
+			if len(key) == 1 {
+				query += key
+			}
+		}
+	}
+}
+
+func exportPickerRaw(out io.Writer, input string, styleName string, width int) string {
+	formats := []string{"text", "go", "js", "ts", "py", "json", "html", "rust", "csharp", "sh"}
+	selected := 0
+	for {
+		options := make([]string, 0, len(formats))
+		for i, format := range formats {
+			prefix := " "
+			if i == selected {
+				prefix = ">"
+			}
+			options = append(options, fmt.Sprintf("%s %d %s", prefix, i+1, format))
+		}
+		renderInteractive(out, input, styleName, 0, 1, width, "export format: arrows/n/p, number, enter, esc", options)
+		key := readKey()
+		switch key {
+		case "enter":
+			return formats[selected]
+		case "esc":
+			return ""
+		case "n", "right", "down":
+			selected = (selected + 1) % len(formats)
+		case "p", "left", "up":
+			selected--
+			if selected < 0 {
+				selected = len(formats) - 1
+			}
+		default:
+			if len(key) == 1 && key[0] >= '1' && key[0] <= '9' {
+				index := int(key[0] - '1')
+				if index < len(formats) {
+					return formats[index]
+				}
+			}
+			if key == "0" {
+				return formats[9]
+			}
+		}
+	}
+}
+
+func editPromptRaw(out io.Writer, label string, initial string) string {
+	value := initial
+	for {
+		clearScreen(out)
+		fmt.Fprintf(out, "%s: %s\r\n\r\nEnter to accept, Esc to cancel\r\n", label, value)
+		key := readKey()
+		switch key {
+		case "enter":
+			return value
+		case "esc":
+			return initial
+		case "backspace":
+			if len(value) > 0 {
+				value = value[:len(value)-1]
+			}
+		default:
+			if len(key) == 1 {
+				value += key
+			}
+		}
+	}
+}
+
+func showMessageRaw(out io.Writer, message string) {
+	fmt.Fprintf(out, "\r\n%s\r\npress any key...", message)
+	_ = readKey()
+}
+
+func readKey() string {
+	var b [3]byte
+	n, err := os.Stdin.Read(b[:1])
+	if err != nil || n == 0 {
+		return ""
+	}
+	switch b[0] {
+	case 3:
+		return "ctrl-c"
+	case 13, 10:
+		return "enter"
+	case 27:
+		os.Stdin.Read(b[1:2])
+		if b[1] == '[' {
+			os.Stdin.Read(b[2:3])
+			switch b[2] {
+			case 'A':
+				return "up"
+			case 'B':
+				return "down"
+			case 'C':
+				return "right"
+			case 'D':
+				return "left"
+			}
+		}
+		return "esc"
+	case 8, 127:
+		return "backspace"
+	default:
+		return string(b[0])
+	}
+}
+
+func matchingStyles(styles []string, query string) []int {
+	var matches []int
+	query = strings.ToLower(query)
+	for i, style := range styles {
+		if query == "" || strings.Contains(style, query) {
+			matches = append(matches, i)
+		}
+	}
+	return matches
+}
+
+func crlf(value string) string {
+	return strings.ReplaceAll(value, "\n", "\r\n")
+}
+
 func wait(reader *bufio.Reader, out io.Writer) {
 	fmt.Fprint(out, "Press Enter...")
 	_, _ = reader.ReadString('\n')
@@ -256,13 +493,4 @@ func wait(reader *bufio.Reader, out io.Writer) {
 
 func clearScreen(out io.Writer) {
 	fmt.Fprint(out, "\033[2J\033[H")
-}
-
-func StyleNames() []string {
-	names := make([]string, 0, len(styles))
-	for name := range styles {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
 }

@@ -2,6 +2,8 @@ package text
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -11,7 +13,7 @@ func Copy(value string) error {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
-		cmd = exec.Command("powershell", "-NoProfile", "-Command", "Set-Clipboard -Value ([Console]::In.ReadToEnd())")
+		return copyWindows(value)
 	case "darwin":
 		cmd = exec.Command("pbcopy")
 	default:
@@ -33,5 +35,25 @@ func Copy(value string) error {
 		return errors.New("no clipboard command found")
 	}
 	cmd.Stdin = strings.NewReader(value)
+	return cmd.Run()
+}
+
+func copyWindows(value string) error {
+	file, err := os.CreateTemp("", "gli-clipboard-*.txt")
+	if err != nil {
+		return err
+	}
+	path := file.Name()
+	defer os.Remove(path)
+	if _, err := file.WriteString(value); err != nil {
+		file.Close()
+		return err
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+
+	script := fmt.Sprintf("Set-Clipboard -Value (Get-Content -Raw -LiteralPath '%s')", strings.ReplaceAll(path, "'", "''"))
+	cmd := exec.Command("powershell", "-NoProfile", "-Command", script)
 	return cmd.Run()
 }

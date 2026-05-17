@@ -79,12 +79,12 @@ Invoke-Expression (gli reload --print)
 Generate ASCII text art:
 
 ```sh
-gli text "Hello" --style standard
-gli text "Hello" --style slant
+gli text "Hello" --style 3d-diagonal
+gli text "Hello" --style fun-face
 gli text --list
 gli text --preview Hello
 gli text "Hello" --export go --copy
-gli text "Hello" --style block --out banner.txt
+gli text "Hello" --style ansi-shadow --out banner.txt
 ```
 
 Run `gli text` without text to open a small interactive preview loop. Direct mode only copies when `--copy` is passed. Interactive mode copies when you choose copy/export.

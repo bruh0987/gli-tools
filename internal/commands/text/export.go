@@ -14,25 +14,25 @@ func Export(rendered string, format string) (string, error) {
 		return rendered, nil
 	case "go":
 		if !strings.Contains(rendered, "`") {
-			return "`" + rendered + "`", nil
+			return "const banner = `" + rendered + "`", nil
 		}
-		return strconv.Quote(rendered), nil
+		return "const banner = " + strconv.Quote(rendered), nil
 	case "js", "ts":
-		return "`" + strings.ReplaceAll(strings.ReplaceAll(rendered, "\\", "\\\\"), "`", "\\`") + "`", nil
+		return "console.log(`" + strings.ReplaceAll(strings.ReplaceAll(rendered, "\\", "\\\\"), "`", "\\`") + "`);", nil
 	case "py":
 		if !strings.Contains(rendered, `"""`) {
-			return `"""` + rendered + `"""`, nil
+			return `print("""` + rendered + `""")`, nil
 		}
-		return strconv.Quote(rendered), nil
+		return "print(" + strconv.Quote(rendered) + ")", nil
 	case "json":
 		data, _ := json.Marshal(rendered)
 		return string(data), nil
 	case "html":
 		return "<pre>" + html.EscapeString(rendered) + "</pre>", nil
 	case "rust":
-		return `r#"` + strings.ReplaceAll(rendered, `"#`, `"\#`) + `"#`, nil
+		return `println!("{}", r#"` + strings.ReplaceAll(rendered, `"#`, `"\#`) + `"#);`, nil
 	case "csharp":
-		return `@"` + strings.ReplaceAll(rendered, `"`, `""`) + `"`, nil
+		return `Console.WriteLine(@"` + strings.ReplaceAll(rendered, `"`, `""`) + `");`, nil
 	case "sh":
 		return "cat <<'EOF'\n" + rendered + "EOF", nil
 	default:
