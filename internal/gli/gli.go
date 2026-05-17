@@ -10,6 +10,7 @@ import (
 	"github.com/bruh0987/gli-tools/internal/commands/hello"
 	"github.com/bruh0987/gli-tools/internal/commands/lines"
 	"github.com/bruh0987/gli-tools/internal/commands/reload"
+	"github.com/bruh0987/gli-tools/internal/commands/text"
 	"github.com/bruh0987/gli-tools/internal/commands/update"
 )
 
@@ -35,6 +36,11 @@ func Run(args []string, out io.Writer, errOut io.Writer) int {
 			Name:        "reload",
 			Description: "Refresh shell PATH helpers.",
 			Run:         reload.Run,
+		},
+		"text": {
+			Name:        "text",
+			Description: "Generate ASCII text art.",
+			Run:         text.Run,
 		},
 		"update": {
 			Name:        "update",

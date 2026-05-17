@@ -28,6 +28,7 @@ The project is intentionally simple:
 | `gli hello` | Minimal example command used as the project skeleton. |
 | `gli lines` | Count lines recursively and group them by file extension. |
 | `gli reload` | Print or run helpers for refreshing shell `PATH`. |
+| `gli text` | Generate ASCII text art. |
 | `gli update` | Replace the current `gli` binary from GitHub. |
 
 ## Usage
@@ -72,6 +73,21 @@ A process cannot directly mutate the already-running parent shell, so the defaul
 ```powershell
 Invoke-Expression (gli reload --print)
 ```
+
+### `gli text`
+
+Generate ASCII text art:
+
+```sh
+gli text "Hello" --style standard
+gli text "Hello" --style slant
+gli text --list
+gli text --preview Hello
+gli text "Hello" --export go --copy
+gli text "Hello" --style block --out banner.txt
+```
+
+Run `gli text` without text to open a small interactive preview loop. Direct mode only copies when `--copy` is passed. Interactive mode copies when you choose copy/export.
 
 ### `gli lines`
 
